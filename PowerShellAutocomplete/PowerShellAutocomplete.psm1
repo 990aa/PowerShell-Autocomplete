@@ -56,8 +56,8 @@ function Import-PowerShellAutocomplete {
     Write-Host "Loading PowerShell Autocomplete..." -ForegroundColor Green
     
     # Load command history and custom suggestions
-    Load-CommandHistory
-    Load-CustomSuggestions
+        Import-CommandHistory
+        Import-CustomSuggestions
     
     # Check and build TabInterface if needed
     Initialize-TabInterface
@@ -392,7 +392,7 @@ function Initialize-PSReadLine {
 # Show-InlineSuggestion, Get-InlineSuggestion, Register-TabCompletion, Get-EnhancedSuggestions
 
 # Export functions
-Export-ModuleMember -Function Import-PowerShellAutocomplete, Add-CustomSuggestion, Remove-CustomSuggestion, Get-CustomSuggestions, Show-CustomSuggestionsTab
+Export-ModuleMember -Function Import-PowerShellAutocomplete, Add-CustomSuggestion, Remove-CustomSuggestion, Get-CustomSuggestions, Show-CustomSuggestionsTab, Import-CustomSuggestions, Import-CommandHistory, Add-CommandHistoryEntry
 
 # Auto-import when module is loaded
 Import-PowerShellAutocomplete
