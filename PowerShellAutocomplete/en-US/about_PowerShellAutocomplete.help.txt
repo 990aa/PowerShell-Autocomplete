@@ -1,0 +1,168 @@
+Topic: about_PowerShellAutocomplete
+Short Description: Intelligent autocomplete with inline suggestions and custom autofill statements
+Long Description: 
+    PowerShell Autocomplete is a comprehensive module that enhances your 
+    PowerShell experience with intelligent suggestions, command history 
+    learning, and customizable autofill statements.
+
+# Overview
+PowerShell Autocomplete provides three main features:
+
+  1. INLINE SUGGESTIONS: See command completions in light gray text as you type
+  2. TAB COMPLETION: Traditional tab completion with learned commands
+  3. CUSTOM AUTOFILL: User-defined command templates with a tabbed interface
+
+# Key Features
+
+## Inline Suggestions
+- As you type, see potential completions in light gray
+- Press RIGHT ARROW to accept the suggestion
+- Suggestions adapt based on what you're typing
+
+## Tab Completion  
+- Press TAB to see all available options
+- Includes both built-in commands and learned commands
+- Learned commands are marked with a book icon (📚)
+
+## Custom Autofill Statements
+- Press CTRL+SPACE to open the custom suggestions tab
+- Use ARROW KEYS to navigate and ENTER to select
+- Add your own frequently used commands
+- Perfect for long or complex commands you use regularly
+
+# Commands
+
+## Import-PowerShellAutocomplete
+Imports and initializes the autocomplete module with all features.
+
+SYNTAX:
+    Import-PowerShellAutocomplete
+
+EXAMPLES:
+    PS C:\> Import-PowerShellAutocomplete
+
+## Add-CustomSuggestion
+Adds a custom autofill suggestion to the database.
+
+SYNTAX:
+    Add-CustomSuggestion -Name <String> -Value <String>
+
+PARAMETERS:
+    -Name: The display name for the suggestion
+    -Value: The actual command/text to insert
+
+EXAMPLES:
+    PS C:\> Add-CustomSuggestion -Name "Docker Up" -Value "docker-compose up -d"
+    PS C:\> Add-CustomSuggestion -Name "Git Status" -Value "git status"
+
+## Remove-CustomSuggestion
+Removes a custom autofill suggestion.
+
+SYNTAX:
+    Remove-CustomSuggestion -Name <String>
+
+PARAMETERS:
+    -Name: The name of the suggestion to remove
+
+EXAMPLES:
+    PS C:\> Remove-CustomSuggestion -Name "Docker Up"
+
+## Get-CustomSuggestions
+Displays all custom autofill suggestions.
+
+SYNTAX:
+    Get-CustomSuggestions
+
+EXAMPLES:
+    PS C:\> Get-CustomSuggestions
+
+## Show-CustomSuggestionsTab
+Manually opens the custom suggestions tab interface.
+
+SYNTAX:
+    Show-CustomSuggestionsTab
+
+EXAMPLES:
+    PS C:\> Show-CustomSuggestionsTab
+
+# Keyboard Shortcuts
+
+- RIGHT ARROW: Accept inline suggestion
+- TAB: Show all completion options  
+- CTRL+SPACE: Open custom suggestions tab
+- ARROW KEYS: Navigate in custom suggestions tab
+- ENTER: Select custom suggestion
+- ESC: Cancel custom suggestions
+
+# Default Custom Suggestions
+
+The module comes with these useful defaults:
+
+- "Git Status" → "git status"
+- "Git Commit All" → 'git commit -am "'
+- "Docker PS" → "docker ps" 
+- "Docker Compose Up" → "docker-compose up -d"
+- "Python HTTP Server" → "python -m http.server 8000"
+- "List Directory Details" → "dir /a"
+- "Current Path" → "cd $PWD"
+- "Home Directory" → "cd ~"
+
+# Requirements
+
+- Windows PowerShell 5.1+ or PowerShell 7+
+- Windows Terminal (recommended)
+- .NET Framework 4.6.2+ (for TabInterface)
+- PSReadLine (optional but recommended)
+
+# Installation
+
+## Quick Install
+    irm https://raw.githubusercontent.com/990aa/PowerShell-Autocomplete/main/install.ps1 | iex
+
+## Manual Install
+    git clone https://github.com/990aa/PowerShell-Autocomplete.git
+    cd PowerShell-Autocomplete
+    .\install.ps1
+
+# Uninstallation
+
+## Temporary (current session only)
+    Remove-Module PowerShellAutocomplete -Force
+
+## Permanent
+    # Remove from $PROFILE and delete module folder
+    Remove-Item "$HOME\Documents\PowerShell\Modules\PowerShellAutocomplete" -Recurse -Force
+
+# Troubleshooting
+
+## Inline suggestions not showing
+- Ensure PSReadLine is installed: Install-Module PSReadLine -Force
+- Check if feature is enabled: $global:AutocompleteConfig.ShowInlineSuggestions
+
+## TabInterface not working  
+- Verify .NET Framework 4.6.2+ is installed
+- Check TabInterface.exe exists in ../TabInterface/ folder
+- Try rebuilding: cd TabInterface; .\build.bat
+
+## Custom suggestions not saving
+- Check write permissions to module directory
+- Verify CustomSuggestions.json file exists
+
+# Notes
+
+- The module learns from your command history automatically
+- Custom suggestions are saved in CustomSuggestions.json
+- Command history is saved in command_history.json
+- All paths are relative to the module directory
+
+# See Also
+- about_PSReadLine
+- about_Modules
+- about_Profiles
+
+# Keywords
+- autocomplete
+- tab-completion  
+- suggestions
+- productivity
+- powershell
