@@ -2,6 +2,7 @@
 # Provides intelligent tab completion and inline suggestions
 
 # Global variables
+### --- AUTOFILL ENHANCEMENT: Custom Suggestions & Tab Navigation --- ###
 $global:AutocompleteConfig = @{
     CommandDatabase = @{
         # System commands
@@ -28,14 +29,19 @@ $global:AutocompleteConfig = @{
         "curl" = @("-L", "-O", "-X", "GET", "POST")
     }
     LearnedCommands = @{}
+    CustomSuggestions = @{}
     CommandHistoryFile = Join-Path $PSScriptRoot "command_history.json"
+    CustomSuggestionsFile = Join-Path $PSScriptRoot "custom_suggestions.json"
     ShowInlineSuggestions = $true
     MaxHistoryEntries = 50
+    SuggestionTab = 0 # 0: built-in/learned, 1: custom
 }
+
 
 # Inline suggestion state
 $global:CurrentSuggestion = $null
 $global:LastInput = $null
+$global:CurrentCustomSuggestion = $null
 
 # Check for PSReadLine
 $global:PSReadLineAvailable = (Get-Module -ListAvailable -Name PSReadLine) -ne $null
@@ -57,6 +63,8 @@ function Import-PowerShellAutocomplete {
     
     # Load command history
     Load-CommandHistory
+    # Load custom suggestions
+    Load-CustomSuggestions
     
     # Set up PSReadLine if available
     if ($global:PSReadLineAvailable) {
@@ -94,22 +102,38 @@ function Initialize-PSReadLine {
     
     if (-not $global:PSReadLineAvailable) { return }
     
-    # Right arrow to accept suggestion
+    # Right arrow to accept suggestion or switch tab
     Set-PSReadLineKeyHandler -Key RightArrow -ScriptBlock {
         $line = $null
         $cursor = $null
         [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
         
-        # If we're at the end of the line and have a suggestion, accept it
-        if ($cursor -eq $line.Length -and $global:CurrentSuggestion) {
-            [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($line.Length)
-            [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, $global:CurrentSuggestion + " ")
-            $global:CurrentSuggestion = $null
-            $global:LastInput = $null
+        # If at end of line and have a suggestion, accept it
+        if ($cursor -eq $line.Length) {
+            if ($global:AutocompleteConfig.SuggestionTab -eq 0 -and $global:CurrentSuggestion) {
+                [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($line.Length)
+                [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, $global:CurrentSuggestion + " ")
+                $global:CurrentSuggestion = $null
+                $global:LastInput = $null
+            } elseif ($global:AutocompleteConfig.SuggestionTab -eq 1 -and $global:CurrentCustomSuggestion) {
+                [Microsoft.PowerShell.PSConsoleReadLine]::SetCursorPosition($line.Length)
+                [Microsoft.PowerShell.PSConsoleReadLine]::Replace(0, $line.Length, $global:CurrentCustomSuggestion + " ")
+                $global:CurrentCustomSuggestion = $null
+                $global:LastInput = $null
+            } else {
+                [Microsoft.PowerShell.PSConsoleReadLine]::ForwardChar()
+            }
         } else {
-            # Otherwise just move cursor right
             [Microsoft.PowerShell.PSConsoleReadLine]::ForwardChar()
         }
+    }
+
+    # Left/Right arrow to switch suggestion tab
+    Set-PSReadLineKeyHandler -Key Ctrl+LeftArrow -ScriptBlock {
+        $global:AutocompleteConfig.SuggestionTab = 0
+    }
+    Set-PSReadLineKeyHandler -Key Ctrl+RightArrow -ScriptBlock {
+        $global:AutocompleteConfig.SuggestionTab = 1
     }
     
     # Tab for traditional completion
@@ -163,27 +187,86 @@ function Show-InlineSuggestion {
     try {
         $currentInput = $Host.UI.RawUI.ReadLine()
         if (-not $currentInput) { return }
-        
         $inputText = $currentInput.Trim()
         if (-not $inputText) { return }
-        
-        $suggestionSuffix = Get-InlineSuggestion -currentInput $inputText
-        
-        if ($suggestionSuffix) {
-            # Save current cursor position
-            $cursorLeft = $Host.UI.RawUI.CursorPosition.X
-            $cursorTop = $Host.UI.RawUI.CursorPosition.Y
-            
-            # Display suggestion in light gray
-            Write-Host $suggestionSuffix -NoNewline -ForegroundColor DarkGray
-            
-            # Restore cursor position
-            $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $cursorLeft, $cursorTop
+
+        if ($global:AutocompleteConfig.SuggestionTab -eq 0) {
+            $suggestionSuffix = Get-InlineSuggestion -currentInput $inputText
+            if ($suggestionSuffix) {
+                $cursorLeft = $Host.UI.RawUI.CursorPosition.X
+                $cursorTop = $Host.UI.RawUI.CursorPosition.Y
+                Write-Host $suggestionSuffix -NoNewline -ForegroundColor DarkGray
+                $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $cursorLeft, $cursorTop
+            }
+        } elseif ($global:AutocompleteConfig.SuggestionTab -eq 1) {
+            $customSuggestionSuffix = Get-CustomSuggestion -currentInput $inputText
+            if ($customSuggestionSuffix) {
+                $cursorLeft = $Host.UI.RawUI.CursorPosition.X
+                $cursorTop = $Host.UI.RawUI.CursorPosition.Y
+                Write-Host $customSuggestionSuffix -NoNewline -ForegroundColor Yellow
+                $Host.UI.RawUI.CursorPosition = New-Object System.Management.Automation.Host.Coordinates $cursorLeft, $cursorTop
+            }
+        }
+    } catch {}
+function Get-CustomSuggestion {
+    param([string]$currentInput)
+    if ([string]::IsNullOrWhiteSpace($currentInput)) {
+        $global:CurrentCustomSuggestion = $null
+        return $null
+    }
+    $allCustoms = @($global:AutocompleteConfig.CustomSuggestions.Keys)
+    $matchingCustoms = $allCustoms | Where-Object { $_ -like "$currentInput*" } | Sort-Object
+    if ($matchingCustoms.Count -eq 0) {
+        $global:CurrentCustomSuggestion = $null
+        return $null
+    }
+    $bestMatch = $matchingCustoms[0]
+    if ($bestMatch -eq $currentInput) {
+        $global:CurrentCustomSuggestion = $null
+        return $null
+    }
+    $global:CurrentCustomSuggestion = $bestMatch
+    return $bestMatch.Substring($currentInput.Length)
+}
+# Command history functions
+function Load-CustomSuggestions {
+    $file = $global:AutocompleteConfig.CustomSuggestionsFile
+    if (Test-Path $file) {
+        try {
+            $content = Get-Content $file -Raw | ConvertFrom-Json
+            $global:AutocompleteConfig.CustomSuggestions = @{}
+            $content.PSObject.Properties | ForEach-Object {
+                $global:AutocompleteConfig.CustomSuggestions[$_.Name] = $_.Value
+            }
+        } catch {
+            Write-Warning "Could not load custom suggestions: $_"
         }
     }
-    catch {
-        # Ignore errors in suggestion display
+}
+
+function Save-CustomSuggestions {
+    try {
+        $global:AutocompleteConfig.CustomSuggestions | ConvertTo-Json | Set-Content $global:AutocompleteConfig.CustomSuggestionsFile
+    } catch {
+        Write-Warning "Could not save custom suggestions: $_"
     }
+}
+
+# User function to add custom suggestions
+function Add-CustomSuggestion {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Suggestion
+    )
+    if ([string]::IsNullOrWhiteSpace($Suggestion)) { return }
+    if (-not $global:AutocompleteConfig.CustomSuggestions.ContainsKey($Suggestion)) {
+        $global:AutocompleteConfig.CustomSuggestions[$Suggestion] = @()
+        Save-CustomSuggestions
+        Write-Host "Custom suggestion added: $Suggestion" -ForegroundColor Yellow
+    } else {
+        Write-Host "Custom suggestion already exists: $Suggestion" -ForegroundColor DarkYellow
+    }
+}
 }
 
 function Get-InlineSuggestion {
@@ -339,7 +422,7 @@ function Get-EnhancedSuggestions {
 }
 
 # Export functions
-Export-ModuleMember -Function Import-PowerShellAutocomplete
+Export-ModuleMember -Function Import-PowerShellAutocomplete,Add-CustomSuggestion
 
 # Auto-import when module is loaded
 Import-PowerShellAutocomplete
