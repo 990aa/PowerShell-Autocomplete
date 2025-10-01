@@ -69,4 +69,4 @@ Feel free to submit issues and pull requests!
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License - see LICENSE[LICENSE] file for details
