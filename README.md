@@ -31,6 +31,11 @@ cd PowerShell-Autocomplete
 .\install.ps1
 ```
 
+### Verification
+```powershell
+Get-Module PowerShellAutocomplete
+```
+
 ## Usage
 
 ### Basic Autocomplete
@@ -56,6 +61,29 @@ Remove-CustomSuggestion -Name "Docker Compose"
 
 # List all custom suggestions
 Get-CustomSuggestions
+```
+## Disable Module
+
+### Remove Module from Current Session
+```powershell
+Remove-Module PowerShellAutocomplete -Force
+```
+
+### Disable Specific Features
+```powershell
+# Disable just inline suggestions
+$global:AutocompleteConfig.ShowInlineSuggestions = $false
+
+# Or disable PSReadLine key handlers
+if (Get-Module PSReadLine) {
+    Remove-PSReadLineKeyHandler -Key Ctrl+Space
+    Remove-PSReadLineKeyHandler -Key RightArrow
+}
+```
+
+### Uninstall Completely
+```powershell
+Remove-Item "$HOME\Documents\PowerShell\Modules\PowerShellAutocomplete" -Recurse -Force; Remove-Item "$HOME\Documents\PowerShell\Modules\..\TabInterface" -Recurse -Force -ErrorAction SilentlyContinue; Write-Host "Completely uninstalled!" -ForegroundColor Green
 ```
 
 ## Default Custom Suggestions
